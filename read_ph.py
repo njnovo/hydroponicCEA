@@ -6,7 +6,7 @@ import os
 class CalibratedPHReader:
     def __init__(self, config_file='ph_calibration_data.json'):
         self.config_file = config_file
-        self.serial_port = '/dev/ttyACM0'
+        self.serial_port = '/dev/ttyUSB0'
         self.baud_rate = 9600
         self.calibration_data = None
         self.load_calibration()
@@ -37,7 +37,7 @@ class CalibratedPHReader:
                 time.sleep(1.0)
                 if ser.in_waiting > 0:
                     response = ser.readline().decode('utf-8').strip()
-                    return float(response[4:])
+                    return float(response[:4])
         except Exception as e:
             print(f"Error reading pH: {e}")
             return None
