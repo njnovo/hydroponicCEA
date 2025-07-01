@@ -1,27 +1,20 @@
 import serial
 import time
 
-# Change to your actual serial port (e.g., /dev/ttyUSB0 or COM3)
-SERIAL_PORT = '/dev/ttyUSB0'  # or 'COM3' on Windows
-BAUD_RATE = 9600
-TIMEOUT = 1  # seconds
-
 def read_ph_usb():
-    with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT) as ser:
-        # Clear any existing data
+    with serial.Serial('/dev/ttyACM0', 9600, timeout=1) as ser:
         ser.flushInput()
-
-        # Send the "R" command to request a reading
         ser.write(b"R\r")
-        time.sleep(1.0)  # Wait for the response
-
-        # Read response from device
+        time.sleep(1.0)
         if ser.in_waiting > 0:
             response = ser.readline().decode('utf-8').strip()
+            print(f"Raw response: {response}")
             try:
-                ph_value = float(response)
+                # Split the response if it's comma-separated
+                parts = response.split(",")
+                ph_value = float(parts[0])  # First value should be pH
                 return ph_value
-            except ValueError:
+            except (ValueError, IndexError):
                 print(f"Unexpected response: {response}")
                 return None
 
