@@ -3,7 +3,7 @@ import time
 
 class ORPReader:
     def __init__(self):
-        self.serial_port = '/dev/ttyUSB1'
+        self.serial_port = '/dev/ttyUSB0'
         self.baud_rate = 9600
 
     def send_command(self,ser, cmd):
@@ -26,4 +26,4 @@ if __name__ == "__main__":
     reader = ORPReader()
     while True:
         time.sleep(.5)
-        print(reader.read_raw_orp())
+        print("    " + reader.read_raw_orp())

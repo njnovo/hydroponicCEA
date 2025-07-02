@@ -69,11 +69,13 @@ def main():
     try:
         while True:
             rgb = sensor.read_rgb()
+            print(rgb)
             if rgb:
                 r, g, b = rgb
                 print(f"RGB Values - Red: {r}, Green: {g}, Blue: {b}")
             
             illuminance = sensor.read_lux()
+            print(rgb)
             if illuminance is not None:
                 print(f"Illuminance: {illuminance}")
             
