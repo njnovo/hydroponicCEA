@@ -1,23 +1,39 @@
 import time
 from read_sensors.read_ph import CalibratedPHReader
 from read_sensors.read_ec import CalibratedECReader
-from read_sensors.read_ultra import UltrasonicReader
 from actuators.motor import Motor
 from calibration.reservoir_logger import ReservoirLogger, ReservoirAdjustment
+from typing import Optional
+
+# Optional import for ultrasonic sensor
+try:
+    from read_sensors.read_ultra import UltrasonicReader
+    ULTRASONIC_AVAILABLE = True
+except (ImportError, RuntimeError):
+    ULTRASONIC_AVAILABLE = False
+    print("Note: Ultrasonic sensor support not available - will use default volume")
 
 def main():
     # Initialize sensors and motors
     ph_reader = CalibratedPHReader()
     ec_reader = CalibratedECReader()
-    # Initialize ultrasonic sensor with your tub dimensions
-    ultra_reader = UltrasonicReader(
-        trigger_pin=23,  # GPIO23
-        echo_pin=24,     # GPIO24
-        tub_height_cm=40.0,  # Adjust these dimensions
-        tub_length_cm=60.0,  # to match your
-        tub_width_cm=40.0,   # actual tub
-        sensor_offset_cm=2.0  # Distance sensor is mounted from top
-    )
+    
+    # Initialize ultrasonic sensor if available
+    ultra_reader: Optional[UltrasonicReader] = None
+    if ULTRASONIC_AVAILABLE:
+        try:
+            ultra_reader = UltrasonicReader(
+                trigger_pin=23,  # GPIO23
+                echo_pin=24,     # GPIO24
+                tub_height_cm=40.0,  # Adjust these dimensions
+                tub_length_cm=60.0,  # to match your
+                tub_width_cm=40.0,   # actual tub
+                sensor_offset_cm=2.0  # Distance sensor is mounted from top
+            )
+            print("Ultrasonic sensor initialized successfully")
+        except Exception as e:
+            print(f"Failed to initialize ultrasonic sensor: {e}")
+            ultra_reader = None
 
     fertilizer_part_a = Motor(17, 27, 22)
     fertilizer_part_b = Motor(23, 24, 25)
@@ -70,31 +86,29 @@ def main():
     try:
         while True:
             try:
-                # Read current volume first
-                current_volume = ultra_reader.get_water_volume_l()
-                if current_volume is None:
-                    print("Error: Could not read water level. Waiting 5 minutes...")
-                    time.sleep(300)
-                    continue
+                # Read current volume if sensor available
+                current_volume = None
+                if ultra_reader is not None:
+                    current_volume = ultra_reader.get_water_volume_l()
+                    if current_volume is not None:
+                        print(f"\nCurrent water volume: {current_volume:.1f}L")
+                        
+                        # Check if volume is too low
+                        if current_volume < MIN_VOLUME:
+                            print(f"Warning: Water level too low ({current_volume:.1f}L < {MIN_VOLUME}L)")
+                            print("Please add water to the reservoir.")
+                            time.sleep(300)  # Wait 5 minutes
+                            continue
+                        elif current_volume < WARNING_VOLUME:
+                            print(f"\n⚠️  Warning: Water level is getting low ({current_volume:.1f}L < {WARNING_VOLUME}L)")
+                            print("Please fill up the reservoir soon to maintain optimal operation.")
                     
-                print(f"\nCurrent water volume: {current_volume:.1f}L")
-                
-                # Check if volume is too low
-                if current_volume < MIN_VOLUME:
-                    print(f"Warning: Water level too low ({current_volume:.1f}L < {MIN_VOLUME}L)")
-                    print("Please add water to the reservoir.")
-                    time.sleep(300)  # Wait 5 minutes
-                    continue
-                elif current_volume < WARNING_VOLUME:
-                    print(f"\n⚠️  Warning: Water level is getting low ({current_volume:.1f}L < {WARNING_VOLUME}L)")
-                    print("Please fill up the reservoir soon to maintain optimal operation.")
-                
-                # Update logger's volume
+                # Update logger's volume (will use default if current_volume is None)
                 logger.volume_liters = current_volume
                 
                 # Read current values
-                current_ph = ph_reader.read_calibrated_ph()
-                current_ec = float(ec_reader.read_raw_ec())
+                current_ph = ph_reader.read_ph()
+                current_ec = float(ec_reader.read_ec())
                 
                 if current_ph is None or current_ec is None:
                     print("Error: Could not read pH or EC. Waiting 5 minutes...")
@@ -126,16 +140,20 @@ def main():
                     time.sleep(300)  # 5 minutes
                     
                     # Read new values
-                    new_ph = ph_reader.read_calibrated_ph()
-                    new_ec = float(ec_reader.read_raw_ec())
-                    new_volume = ultra_reader.get_water_volume_l()  # Check volume again
+                    new_ph = ph_reader.read_ph()
+                    new_ec = float(ec_reader.read_ec())
+                    new_volume = ultra_reader.get_water_volume_l() if ultra_reader else None
                     
-                    if None in (new_ph, new_ec, new_volume):
+                    if None in (new_ph, new_ec):
                         print("Error: Could not read sensors after adjustment")
                         time.sleep(300)
                         continue
-                        
-                    print(f"New readings - pH: {new_ph:.2f}, EC: {new_ec:.0f}, Volume: {new_volume:.1f}L")
+                    
+                    # Print readings
+                    if new_volume is not None:
+                        print(f"New readings - pH: {new_ph:.2f}, EC: {new_ec:.0f}, Volume: {new_volume:.1f}L")
+                    else:
+                        print(f"New readings - pH: {new_ph:.2f}, EC: {new_ec:.0f}")
                     
                     # Log the adjustment
                     adjustment = ReservoirAdjustment(
@@ -148,7 +166,7 @@ def main():
                         ph_down_runtime=runtimes['ph_down'],
                         fert_a_runtime=runtimes['fert_a'],
                         fert_b_runtime=runtimes['fert_b'],
-                        volume_liters=new_volume
+                        volume_liters=new_volume if new_volume is not None else logger.DEFAULT_VOLUME
                     )
                     logger.log_adjustment(adjustment)
                     
@@ -177,7 +195,8 @@ def main():
         print("\nShutting down...")
     finally:
         # Cleanup
-        ultra_reader.cleanup()
+        if ultra_reader is not None:
+            ultra_reader.cleanup()
 
 if __name__ == "__main__":
     main()

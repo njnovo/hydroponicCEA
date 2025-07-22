@@ -15,7 +15,7 @@ class CalibratedECReader:
         response = ser.readline().decode().strip()
         return response.split(",")[0]
     
-    def read_raw_ec(self):
+    def read_ec(self):
         try:
             with serial.Serial(self.serial_port, self.baud_rate, timeout=1) as ser:
                 return self.send_command(ser, "R")
@@ -28,4 +28,4 @@ if __name__ == "__main__":
     reader = CalibratedECReader()
     while True:
         time.sleep(.5)
-        print(reader.read_raw_ec())
+        print(reader.read_ec())

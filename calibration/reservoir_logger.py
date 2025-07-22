@@ -17,7 +17,7 @@ class ReservoirAdjustment:
     ph_down_runtime: float
     fert_a_runtime: float
     fert_b_runtime: float
-    volume_liters: float 
+    volume_liters: float = 100.0  # Default to 100L if not specified
 
 class ReservoirLogger:
     INITIAL_PH_CHANGE_RATE = 0.1  # Very conservative: 0.001 pH change per second
@@ -25,6 +25,7 @@ class ReservoirLogger:
     MIN_ADJUSTMENT_TIME = 1.0       # Minimum time to run motors
     MAX_ADJUSTMENT_TIME = 10.0      # Maximum time to run motors
     SAFETY_MARGIN = 0.2             # 20% safety margin
+    DEFAULT_VOLUME = 100.0          # Default volume in liters
     
     def __init__(self, log_file: str = "reservoir_history.json"):
         self.log_file = Path(log_file)
@@ -34,8 +35,18 @@ class ReservoirLogger:
         # Calibration parameters with conservative initial values
         self.ph_buffer_capacity = self.INITIAL_PH_CHANGE_RATE
         self.ec_response_factor = self.INITIAL_EC_CHANGE_RATE
-        self.volume_liters = 100
-        
+        self._volume_liters = None  # Make volume optional
+    
+    @property
+    def volume_liters(self) -> float:
+        """Get the current volume, returning default if not set"""
+        return self._volume_liters if self._volume_liters is not None else self.DEFAULT_VOLUME
+    
+    @volume_liters.setter
+    def volume_liters(self, value: Optional[float]):
+        """Set the current volume, allowing None to use default"""
+        self._volume_liters = value if value is not None else None
+    
     def load_history(self):
         """Load historical adjustment data from JSON file"""
         if self.log_file.exists():
