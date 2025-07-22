@@ -4,7 +4,6 @@ import time
 
 ph_reader = CalibratedPHReader()
 ec_reader = CalibratedECReader()
-ultra_reader = UltrasonicReader()
 
 if __name__ == "__main__":
     while True:

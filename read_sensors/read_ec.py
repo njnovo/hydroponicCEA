@@ -5,7 +5,7 @@ import os
 
 class CalibratedECReader:
     def __init__(self):
-        self.serial_port = '/dev/ttyUSB1'
+        self.serial_port = '/dev/ttyUSB0'
         self.baud_rate = 9600
 
     def send_command(self,ser, cmd):
@@ -18,7 +18,7 @@ class CalibratedECReader:
     def read_ec(self):
         try:
             with serial.Serial(self.serial_port, self.baud_rate, timeout=1) as ser:
-                return self.send_command(ser, "R")
+                return float(self.send_command(ser, "R"))/1000
                 
         except Exception as e:
             print(f"Error reading EC: {e}")

@@ -5,7 +5,7 @@ import os
 
 class CalibratedPHReader:
     def __init__(self):
-        self.serial_port = '/dev/ttyUSB0'
+        self.serial_port = '/dev/ttyUSB1'
         self.baud_rate = 9600
   
     def read_ph(self):
@@ -17,7 +17,7 @@ class CalibratedPHReader:
                 time.sleep(1.0)
                 if ser.in_waiting > 0:
                     response = ser.readline().decode('utf-8').strip()
-                    return float(response[:4])
+                    return response
         except Exception as e:
             print(f"Error reading pH: {e}")
             return None
