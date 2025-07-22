@@ -110,6 +110,14 @@ class Motor:
         else:
             print("Motor is not running.")
 
+    def run_for_time(self, steps_per_second, direction, time):
+        """
+        Runs the motor for a specified time.
+        """
+        self.run_motor(steps_per_second, direction)
+        time.sleep(time)
+        self.motor_stop()
+
     def cleanup(self):
         """
         Cleans up all GPIO resources.
