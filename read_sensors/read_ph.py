@@ -11,12 +11,12 @@ class CalibratedPHReader:
         ser.write(full_cmd.encode())
         time.sleep(0.5)
         response = ser.readline().decode().strip()
-        return response.split(",")[0]
-    
+        return response
+
     def read_ph(self):
         try:
             with serial.Serial(self.serial_port, self.baud_rate, timeout=1) as ser:
-                return float(self.send_command(ser, "R"))/1000
+                return float(self.send_command(ser, "R")[:-4])
                 
         except Exception as e:
             print(f"Error reading EC: {e}")
